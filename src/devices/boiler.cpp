@@ -26,7 +26,7 @@ uuid::log::Logger Boiler::logger_{F_(boiler), uuid::log::Facility::CONSOLE};
 
 Boiler::Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const std::string & version, const std::string & name, uint8_t flags, uint8_t brand)
     : EMSdevice(device_type, device_id, product_id, version, name, flags, brand) {
-    this->reserve_mem(20); // reserve some space for the telegram registries, to avoid memory fragmentation
+    this->reserve_mem(21); // reserve some space for the telegram registries, to avoid memory fragmentation
 
     LOG_DEBUG(F("Adding new Boiler with device ID 0x%02X"), device_id);
 
@@ -51,6 +51,7 @@ Boiler::Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const 
     register_telegram_type(0xE6, F("UBAParametersPlus"), true, [&](std::shared_ptr<const Telegram> t) { process_UBAParametersPlus(t); });
     register_telegram_type(0xE9, F("UBADHWStatus"), false, [&](std::shared_ptr<const Telegram> t) { process_UBADHWStatus(t); });
     register_telegram_type(0xEA, F("UBAParameterWWPlus"), true, [&](std::shared_ptr<const Telegram> t) { process_UBAParameterWWPlus(t); });
+    register_telegram_type(0x0494, F("EnergyMonitor"), false, [&](std::shared_ptr<const Telegram> t) { process_EnergyMonitor(t); });
 
     // MQTT commands for boiler topic
     register_mqtt_cmd(F("comfort"), [&](const char * value, const int8_t id) { return set_warmwater_mode(value, id); });
@@ -597,7 +598,17 @@ bool Boiler::export_values_main(JsonObject & json) {
     if (Helpers::hasValue(heatWorkMin_)) {
         json["heatWorkMin"] = heatWorkMin_;
     }
-
+    
+    // Total heat operating time
+    if (Helpers::hasValue(EEnergyOutput_)) {
+        json["EEnergyOutput"] = EEnergyOutput_;
+    }
+        if (Helpers::hasValue(EEnergyOutputWW_)) {
+        json["EEnergyOutputWW"] = EEnergyOutputWW_;
+    }
+        if (Helpers::hasValue(EEnergyOutputCH_)) {
+        json["EEnergyOutputCH"] = EEnergyOutputCH_;
+    }
     // Service Code
     // Service Code Number
     if (Helpers::hasValue(serviceCodeNumber_)) {
@@ -1009,6 +1020,24 @@ void Boiler::process_UBASetPoints(std::shared_ptr<const Telegram> telegram) {
     changed_ |= telegram->read_value(setFlowTemp_, 0);    // boiler set temp from thermostat
     changed_ |= telegram->read_value(setBurnPow_, 1);     // max json power in %
     changed_ |= telegram->read_value(wWSetPumpPower_, 2); // ww pump speed/power?
+}
+
+// 0x394 - EnergyMonitor
+// e.g. 08 00 E9 00 37 01 F6 01 ED 00 00 00 00 41 3C 00 00 00 00 00 00 00 00 00 00 00 00 37 00 00 00 (CRC=77) #data=27
+void Boiler::process_EnergyMonitor(std::shared_ptr<const Telegram> telegram) {
+    changed_ |= telegram->read_value(EControlUnit_, 0,4);
+    changed_ |= telegram->read_value(EEnergyOutput_, 4);
+    changed_ |= telegram->read_value(EEnergyOutputWW_, 8,4);
+    changed_ |= telegram->read_value(EEnergyOutputCH_, 12,4);
+    
+
+ //   changed_ |= telegram->read_value(wWWorkM_, 17, 3);  // force to 3 bytes
+  //  changed_ |= telegram->read_value(wWStarts_, 14, 3); // force to 3 bytes
+
+
+    //changed_ |= telegram->read_value(wWActivated_, 20);
+    //changed_ |= telegram->read_value(wWSelTemp_, 10);
+    //changed_ |= telegram->read_value(wWDisinfectTemp_, 9);
 }
 
 #pragma GCC diagnostic push

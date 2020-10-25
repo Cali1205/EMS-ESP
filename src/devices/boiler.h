@@ -148,6 +148,12 @@ class Boiler : public EMSdevice {
     uint8_t heatingActive_  = EMS_VALUE_BOOL_NOTSET; // Central heating is on/off
     uint8_t pumpMod2_       = EMS_VALUE_UINT_NOTSET; // heatpump modulation from 0xE3 (heatpumps)
 
+    // UBAEnergyMonitor
+    uint32_t EControlUnit_        = EMS_VALUE_ULONG_NOTSET;   // [s]
+    uint32_t EEnergyOutput_        = EMS_VALUE_ULONG_NOTSET; // EnergyOutput [kWh]
+    uint32_t EEnergyOutputWW_       = EMS_VALUE_ULONG_NOTSET; // EnergyOutput Warm Water [kWh]
+    uint32_t EEnergyOutputCH_        = EMS_VALUE_ULONG_NOTSET;  // EnergyOutput CentralHeater [kWh]
+
     void process_UBAParameterWW(std::shared_ptr<const Telegram> telegram);
     void process_UBAMonitorFast(std::shared_ptr<const Telegram> telegram);
     void process_UBATotalUptime(std::shared_ptr<const Telegram> telegram);
@@ -167,6 +173,7 @@ class Boiler : public EMSdevice {
     void process_UBAMaintenanceData(std::shared_ptr<const Telegram> telegram);
     void process_UBAErrorMessage(std::shared_ptr<const Telegram> telegram);
     void process_UBADHWStatus(std::shared_ptr<const Telegram> telegram);
+    void process_EnergyMonitor(std::shared_ptr<const Telegram> telegram);
 
     // commands - none of these use the additional id parameter
     bool set_warmwater_mode(const char * value, const int8_t id);
